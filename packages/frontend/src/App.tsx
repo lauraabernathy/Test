@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { FocusModeCard } from './components/FocusModeCard'
 import { TaskInput } from './components/TaskInput'
 import { TaskList } from './components/TaskList'
@@ -33,17 +33,19 @@ export default function App() {
     setInput('')
   }
 
-  const handleToggleTask = (id: number) => {
+  // Keep the toggle callback stable so memoized task rows can skip unrelated renders.
+  const handleToggleTask = useCallback((id: number) => {
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id ? { ...task, completed: !task.completed } : task
       )
     )
-  }
+  }, [])
 
-  const handleDeleteTask = (id: number) => {
+  // Keep the delete callback stable so memoized task rows can skip unrelated renders.
+  const handleDeleteTask = useCallback((id: number) => {
     setTasks((prev) => prev.filter((task) => task.id !== id))
-  }
+  }, [])
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -51,11 +53,19 @@ export default function App() {
     }
   }
 
-  const visibleTasks = currentView === 'Archive'
-    ? tasks.filter((task) => task.completed)
-    : tasks
+  // Recompute the visible list only when its source tasks or selected view changes.
+  const visibleTasks = useMemo(
+    () => currentView === 'Archive'
+      ? tasks.filter((task) => task.completed)
+      : tasks,
+    [tasks, currentView]
+  )
 
-  const highImpactWaitingCount = tasks.filter((task) => task.isHighImpact && !task.completed).length
+  // Recount high-impact incomplete tasks only when the task collection changes.
+  const highImpactWaitingCount = useMemo(
+    () => tasks.filter((task) => task.isHighImpact && !task.completed).length,
+    [tasks]
+  )
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center">
